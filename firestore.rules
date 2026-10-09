@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Hanya pengguna yang log masuk boleh membaca dan menulis.
+    // PENTING: matikan pendaftaran sendiri di Authentication > Settings >
+    // User actions > nyahtanda "Enable create (sign-up)", supaya hanya
+    // akaun yang anda cipta boleh log masuk.
+    function panel() {
+      return request.auth != null;
+      // Pilihan lebih ketat: hadkan kepada e-mel tertentu sahaja, contoh:
+      // return request.auth != null && request.auth.token.email in [
+      //   'setiausaha@moe-dl.edu.my', 'panel1@moe-dl.edu.my'
+      // ];
+    }
+
+    match /{document=**} {
+      allow read, write: if panel();
+    }
+  }
+}
