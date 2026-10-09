@@ -3,8 +3,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
-<script src="firebase-config.js"></script></head><body>
-<title>Pemarkahan SSS Muzik</title>
+<script src="firebase-config.js"></script></head><body><title>Pemarkahan SSS Muzik</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -342,6 +341,11 @@ table.sum tr.on td{background:var(--accent-soft);font-weight:700}
     <div class="map">
       <div class="fld"><label for="pdNeg">Negeri</label><select id="pdNeg"></select></div>
       <div class="fld"><label for="pdTarikh">Tarikh temuduga</label><select id="pdTarikh"></select></div>
+      <div class="fld"><label for="pdSort">Susunan borang</label><select id="pdSort">
+        <option value="masa">Tarikh temuduga, kemudian masa markah diisi (awal → akhir)</option>
+        <option value="isi">Masa markah diisi sahaja (awal → akhir)</option>
+        <option value="negeri">Negeri, kemudian angka giliran</option>
+        <option value="nama">Nama (A → Z)</option></select></div>
       <div class="fld"><label for="pdPk">Perakuan</label><select id="pdPk"><option value="all">Semua</option><option value="diperakui">Diperakui sahaja</option><option value="tidak">Tidak diperakui sahaja</option><option value="belum">Belum diputuskan</option></select></div>
     </div>
     <div class="fld"><label>Status markah</label>
@@ -378,6 +382,8 @@ table.sum tr.on td{background:var(--accent-soft);font-weight:700}
     <div class="fld"><label for="defPanel">Nama panel temuduga (lalai untuk semua calon baru)</label><input type="text" id="defPanel"></div>
     <div class="actions">
       <button id="btnBackup">Simpan sandaran (.json)</button>
+      <label class="btn" for="masaFile" style="display:inline-block" title="Isi masa markah diisi bagi rekod lama, tanpa mengubah markah">Isi masa penilaian dari sandaran</label>
+      <input type="file" id="masaFile" accept=".json" hidden>
       <label class="btn" for="restoreFile" style="display:inline-block">Pulihkan dari sandaran</label>
       <input type="file" id="restoreFile" accept=".json" hidden>
     </div>
@@ -409,8 +415,12 @@ const GUESS={nama:/nama|name/i,sekolah:/sekolah|school/i,kp:/(k\.?\s*p\b|kad|pen
 
 /* ---------- pelayan (Netlify) ---------- */
 /* ---------- pangkalan data: Firebase (Firestore + Auth, Storage pilihan) ---------- */
-const CFG=window.FIREBASE_CONFIG||{};
-const FB_READY=!!(window.firebase&&CFG.apiKey&&CFG.projectId&&!/ISI_|GANTI/i.test(CFG.apiKey+CFG.projectId));
+const CFG=window.FIREBASE_CONFIG||(typeof firebaseConfig!=="undefined"?firebaseConfig:{});
+const FB_WHY=!window.firebase?"Pustaka Firebase gagal dimuatkan. Semak sambungan internet dan muat semula halaman.":
+  window.FIREBASE_CONFIG===undefined&&typeof firebaseConfig==="undefined"?"Fail firebase-config.js tidak ditemui atau formatnya rosak. Pastikan fail itu ada di sebelah index.html dan bermula dengan window.FIREBASE_CONFIG = {":
+  (!CFG.apiKey||!CFG.projectId)?"firebase-config.js tiada apiKey atau projectId.":
+  /ISI_|GANTI/i.test(CFG.apiKey+CFG.projectId)?"firebase-config.js masih mengandungi nilai contoh (ISI_...). Gantikan dengan config projek Firebase anda, kemudian commit ke GitHub.":"";
+const FB_READY=!FB_WHY;
 const USE_STORAGE=!!window.GUNA_STORAGE;
 let fauth=null,fdb=null,fst=null;
 if(FB_READY){
@@ -545,7 +555,7 @@ function subscribe(){
 }
 function unsubscribe(){if(unsubCalon)unsubCalon();if(unsubMeta)unsubMeta();unsubCalon=unsubMeta=null;}
 function needLogin(msg){setSync("login");const m=document.getElementById("mLogin");
-  document.getElementById("loginErr").textContent=msg||(FB_READY?"":"Firebase belum ditetapkan. Isi fail firebase-config.js (rujuk README).");
+  document.getElementById("loginErr").textContent=msg||(FB_READY?"":FB_WHY);
   m.hidden=false;setTimeout(()=>document.getElementById("emailIn").focus(),50);}
 function initials(n){return String(n||"?").replace(/^CONTOH:\s*/,"").split(/\s+/).filter(w=>!/^(BIN|BINTI|A\/L|A\/P)$/i.test(w)).slice(0,2).map(w=>w[0]||"").join("").toUpperCase()||"?";}
 function processImage(file,MAXP,Q){return new Promise((res,rej)=>{
@@ -669,7 +679,7 @@ function renderSheet(){
     legend.querySelectorAll("div").forEach((d,i)=>d.classList.toggle("on",i===ti));
   };
   const legend=h("div",{class:"legend"},TAHAP.map(([n,a,b])=>h("div",null,n,h("span",{text:a+"–"+b}))));
-  const onchg=()=>{refreshSum();refreshB1();refreshB2();renderListSoon();if(!c.hadir){c.hadir="hadir";if(!c.tarikh){c.tarikh=todayISO();tgT.value=c.tarikh;const o=document.getElementById("f_tarikh");if(o)o.value=c.tarikh;}drawHadir();}};
+  const onchg=()=>{if(!c.dinilaiAt){c.dinilaiAt=Date.now();const dl=document.getElementById("dinilaiTxt");if(dl)dl.textContent="Markah mula diisi: "+fmtMasa(c.dinilaiAt);}refreshSum();refreshB1();refreshB2();renderListSoon();if(!c.hadir){c.hadir="hadir";if(!c.tarikh){c.tarikh=todayISO();tgT.value=c.tarikh;const o=document.getElementById("f_tarikh");if(o)o.value=c.tarikh;}drawHadir();}};
 
   // maklumat calon
   // panel foto
@@ -711,7 +721,7 @@ function renderSheet(){
   drawHadir();
 
   const infoCard=h("section",{class:"card"},
-    h("h2",null,"Maklumat calon",h("span",{class:"sp"}),h("span",{class:"saved",text:"Auto-simpan ke pelayan"})),
+    h("h2",null,"Maklumat calon",h("span",{class:"sp"}),h("span",{class:"saved",id:"dinilaiTxt",text:c.dinilaiAt?"Markah mula diisi: "+fmtMasa(c.dinilaiAt):"Auto-simpan ke Firebase"})),
     h("div",{class:"infowrap"},photoBox,h("div",{class:"info"},
       h("div",{class:"fld wide"},h("label",{for:"f_nama",text:"Nama calon"}),txt(c,"nama")),
       h("div",{class:"fld"},h("label",{for:"f_sekolah",text:"Sekolah"}),txt(c,"sekolah")),
@@ -972,6 +982,14 @@ document.getElementById("btnLogout").addEventListener("click",async()=>{try{loca
 document.getElementById("btnBackup").addEventListener("click",async()=>{toast("Menyediakan sandaran…");const foto={};
   for(const c of S.cands){if(c.foto||PHL[c.id]){const d=await photoData(c).catch(()=>null);if(d)foto[c.id]=d;}}
   const d=new Date().toISOString().slice(0,10);saveFile("sandaran_SSS_Muzik_"+d+".json",JSON.stringify({cands:S.cands,defPanel:S.defPanel,foto}));});
+document.getElementById("masaFile").addEventListener("change",e=>{
+  const f=e.target.files[0];e.target.value="";if(!f)return;const r=new FileReader();
+  r.onload=()=>{let d;try{d=JSON.parse(r.result);if(!Array.isArray(d.cands))throw 0;}catch(x){toast("Fail sandaran tidak sah");return;}
+    const by=new Map(d.cands.map(c=>[c.id,c]));let n=0;
+    S.cands.forEach(c=>{if(c.dinilaiAt)return;const o=by.get(c.id);if(!o)return;
+      const t=o.dinilaiAt||(status(blankCand(o))!=="none"?o.updatedAt:0);if(t){c.dinilaiAt=t;markDirty(c.id);n++;}});
+    persist();toast(n?n+" calon dikemas kini dengan masa markah diisi":"Tiada rekod yang perlu dikemas kini");};
+  r.readAsText(f);});
 document.getElementById("restoreFile").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=async()=>{let d;try{d=JSON.parse(r.result);if(!Array.isArray(d.cands))throw 0;}catch(x){toast("Fail sandaran tidak sah");return;}
@@ -992,7 +1010,7 @@ document.getElementById("btnXlsx").addEventListener("click",()=>{
   if(typeof XLSX==="undefined"){toast("Pustaka Excel belum dimuatkan");return;}
   if(!S.cands.length){toast("Tiada calon untuk dieksport");return;}
   const rows=S.cands.map((c,i)=>{
-    const t=total(c);const o={"BIL":i+1,"NAMA CALON":c.nama,"SEKOLAH":c.sekolah,"NO KP / SURAT BERANAK":c.kp,"ANGKA GILIRAN":c.giliran,"ALAMAT":c.alamat,"NO TEL":c.tel,"NEGERI":c.negeri,"TARIKH TEMUDUGA":fmtDate(c.tarikh),"SESI":c.sesi,"KEHADIRAN":hadirLabel(c)};
+    const t=total(c);const o={"BIL":i+1,"NAMA CALON":c.nama,"SEKOLAH":c.sekolah,"NO KP / SURAT BERANAK":c.kp,"ANGKA GILIRAN":c.giliran,"ALAMAT":c.alamat,"NO TEL":c.tel,"NEGERI":c.negeri,"TARIKH TEMUDUGA":fmtDate(c.tarikh),"SESI":c.sesi,"KEHADIRAN":hadirLabel(c),"MASA MARKAH DIISI":fmtMasa(c.dinilaiAt)};
     SIJIL.forEach(([k,l])=>{o[l+" PRAKTIKAL"]=c.sijil[k].p;o[l+" TEORI"]=c.sijil[k].t;o[l+" CATATAN"]=c.sijil[k].c;});
     B1.forEach(([k,l])=>{o[k+" "+l]=c.b1[k].some(filled)?b1Item(c,k):"";});
     o["JUMLAH BAHAGIAN 1.0 (/50)"]=b1Total(c);
@@ -1098,6 +1116,16 @@ async function buildPdf(list,onp,isCancelled){
 
 /* ---------- tetingkap Jana PDF ---------- */
 const mPdf=document.getElementById("mPdf");let pdBusy=false,pdStop=false;
+function masaIsi(c){return c.dinilaiAt||Infinity;}
+function pdfSorter(mode){
+  const gil=(a,b)=>(a.giliran||a.nama||"").localeCompare(b.giliran||b.nama||"",undefined,{numeric:true});
+  const isi=(a,b)=>(masaIsi(a)-masaIsi(b))||((a.ord??0)-(b.ord??0));
+  if(mode==="isi")return isi;
+  if(mode==="negeri")return (a,b)=>(a.negeri||"~").localeCompare(b.negeri||"~")||gil(a,b);
+  if(mode==="nama")return (a,b)=>(a.nama||"").localeCompare(b.nama||"");
+  return (a,b)=>(a.tarikh||"9999").localeCompare(b.tarikh||"9999")||isi(a,b);
+}
+function fmtMasa(t){if(!t||!isFinite(t))return"";const d=new Date(t);return fmtDate(iso(d.getFullYear(),d.getMonth()+1,d.getDate()))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
 function pdfList(){
   const neg=document.getElementById("pdNeg").value,tk=document.getElementById("pdTarikh").value,pk=document.getElementById("pdPk").value;
   const st=document.querySelector("input[name=pdSt]:checked").value;
@@ -1107,7 +1135,7 @@ function pdfList(){
     if(pk==="belum"?c.perakuan:(pk!=="all"&&c.perakuan!==pk))return false;
     const s2=status(c);if(st==="done"&&s2!=="done")return false;if(st==="filled"&&s2==="none")return false;
     return true;
-  }).sort((a,b)=>(a.negeri||"~").localeCompare(b.negeri||"~")||(a.giliran||a.nama).localeCompare(b.giliran||b.nama,undefined,{numeric:true}));
+  }).sort(pdfSorter(document.getElementById("pdSort").value));
 }
 function pdUpdate(){
   const list=pdfList(),fmt=document.querySelector("input[name=pdFmt]:checked").value;const info=document.getElementById("pdInfo");
@@ -1126,7 +1154,7 @@ document.getElementById("btnPdfAll").addEventListener("click",()=>{
   [...new Set(S.cands.map(c=>c.tarikh||""))].sort((a,b)=>(a||"9").localeCompare(b||"9")).forEach(d=>ts.append(h("option",{value:d,text:d?fmtTarikhPanjang(d):"Tiada tarikh"})));
   document.getElementById("pdProg").hidden=true;pdUpdate();mPdf.hidden=false;
 });
-["pdNeg","pdTarikh","pdPk"].forEach(id=>document.getElementById(id).addEventListener("change",pdUpdate));
+["pdNeg","pdTarikh","pdPk","pdSort"].forEach(id=>document.getElementById(id).addEventListener("change",pdUpdate));
 document.querySelectorAll("input[name=pdSt],input[name=pdFmt]").forEach(r=>r.addEventListener("change",pdUpdate));
 document.getElementById("pdCancel").addEventListener("click",()=>{if(pdBusy){pdStop=true;return;}mPdf.hidden=true;});
 document.getElementById("pdGo").addEventListener("click",async()=>{
@@ -1147,7 +1175,7 @@ document.getElementById("pdGo").addEventListener("click",async()=>{
       txt.textContent="Siap. Menyimpan fail…";await saveFile("Borang_SSS_Muzik_"+tag+".pdf",blob);
     }else{
       const zip=new JSZip();
-      if(fmt==="each"){for(const c of list){const b=await buildPdf([c],null,stop);done++;prog();zip.file(safe((c.negeri||"Tiada_negeri"))+"/"+safe((c.giliran?c.giliran+"_":"")+c.nama)+".pdf",b);}}
+      if(fmt==="each"){let no=0;for(const c of list){const b=await buildPdf([c],null,stop);done++;prog();no++;zip.file(safe((c.negeri||"Tiada_negeri"))+"/"+String(no).padStart(4,"0")+"_"+safe((c.giliran?c.giliran+"_":"")+c.nama)+".pdf",b);}}
       else if(fmt==="neg"){const g=new Map();list.forEach(c=>{const k=c.negeri||"Tiada negeri";if(!g.has(k))g.set(k,[]);g.get(k).push(c);});
         for(const [k,cs] of g){const b=await buildPdf(cs,()=>{done++;prog();},stop);zip.file("Borang_"+safe(k)+"_"+cs.length+"_calon.pdf",b);}}
       else{for(let i=0;i<list.length;i+=100){const part=list.slice(i,i+100);const b=await buildPdf(part,()=>{done++;prog();},stop);zip.file("Borang_"+tag+"_bahagian_"+(i/100+1)+"_("+(i+1)+"-"+(i+part.length)+").pdf",b);}}
@@ -1464,7 +1492,7 @@ function authMsg(e){const c=(e&&e.code)||"";
   return(e&&e.message)||"Gagal log masuk.";}
 document.getElementById("kodShow").addEventListener("click",()=>{const i=document.getElementById("kodIn");const sh=i.type==="password";i.type=sh?"text":"password";document.getElementById("kodShow").textContent=sh?"Sembunyi":"Lihat";});
 document.getElementById("loginForm").addEventListener("submit",async e=>{e.preventDefault();
-  const err=document.getElementById("loginErr");if(!FB_READY){err.textContent="Firebase belum ditetapkan. Isi fail firebase-config.js (rujuk README).";return;}
+  const err=document.getElementById("loginErr");if(!FB_READY){err.textContent=FB_WHY;return;}
   const em=document.getElementById("emailIn").value.trim(),pw=document.getElementById("kodIn").value;const b=document.getElementById("btnLogin");
   if(!em||!pw){err.textContent="Masukkan e-mel dan kata laluan.";return;}
   b.disabled=true;b.textContent="Menyemak…";
