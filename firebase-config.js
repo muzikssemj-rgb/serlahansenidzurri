@@ -1,18 +1,10 @@
-// ============================================================
-//  TETAPAN FIREBASE — isi dengan maklumat projek Firebase anda
-//  Firebase console > Project settings (ikon gear) > General >
-//  "Your apps" > Web app > SDK setup and configuration > Config
-// ============================================================
 window.FIREBASE_CONFIG = {
-  apiKey: "ISI_API_KEY",
-  authDomain: "ISI_PROJECT_ID.firebaseapp.com",
-  projectId: "ISI_PROJECT_ID",
-  storageBucket: "ISI_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "ISI",
-  appId: "ISI"
+  apiKey: "AIzaSyADH8sbIgH-yMb8R4imwl55xGHyBCMJnnM",
+  authDomain: "serlahan-seni.firebaseapp.com",
+  projectId: "serlahan-seni",
+  storageBucket: "serlahan-seni.firebasestorage.app",
+  messagingSenderId: "289210129115",
+  appId: "1:289210129115:web:1b83ead7a0385dfbd1cafe",
+  measurementId: "G-9B8S2PZZW7"
 };
-
-// Simpanan VIDEO memerlukan Firebase Storage (pelan Blaze, ada kuota percuma).
-// Tukar kepada true HANYA selepas Storage diaktifkan. Jika false, foto tetap
-// boleh disimpan (dalam Firestore) tetapi butang video disembunyikan.
 window.GUNA_STORAGE = false;
